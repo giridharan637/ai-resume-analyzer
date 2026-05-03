@@ -9,7 +9,7 @@ const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
 
 export function useAnalyses(userEmail: string | undefined | null) {
-  const [data, setData] = useState<HistoryEntry[] | undefined>(undefined);
+  const [data, setData] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
@@ -24,7 +24,7 @@ export function useAnalyses(userEmail: string | undefined | null) {
 
   useEffect(() => {
     if (!userEmail) {
-      setData(undefined);
+      setData([]);
       return;
     }
 
@@ -44,6 +44,7 @@ export function useAnalyses(userEmail: string | undefined | null) {
           console.error("Supabase Fetch Error:", fetchErr.message);
           alert("Failed to load history: " + fetchErr.message);
           setError(new Error(fetchErr.message));
+          setData([]);
         } else {
           // Map snake_case to camelCase
           const entries: HistoryEntry[] = (rows || []).map((r: any) => ({

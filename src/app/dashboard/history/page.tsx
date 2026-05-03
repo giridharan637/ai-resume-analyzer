@@ -34,7 +34,7 @@ export default function HistoryPage() {
     );
   }
 
-  const list = history ?? [];
+  const analyses = history || [];
 
   return (
     <div className="space-y-6">
@@ -47,7 +47,7 @@ export default function HistoryPage() {
             All your past resume analyses, securely stored to your account.
           </p>
         </div>
-        {list.length > 0 && user?.email && (
+        {analyses.length > 0 && user?.email && (
           <Button
             variant="outline"
             size="sm"
@@ -67,16 +67,17 @@ export default function HistoryPage() {
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground/60" />
           <p className="mt-4 text-sm text-muted-foreground">Loading your history...</p>
         </div>
-      ) : list.length === 0 ? (
+      ) : analyses.length === 0 ? (
         <div className="glass-strong rounded-3xl p-12 text-center animate-fade-up">
           <FileText className="mx-auto h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-4 text-muted-foreground">
-            No analyses yet. Run your first analysis from the Analyzer page.
+          <p className="mt-4 text-muted-foreground font-medium">No history found</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Run your first analysis from the Analyzer page to see it here.
           </p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {list.map((h, i) => (
+          {(analyses || []).map((h, i) => (
             <div
               key={h.id}
               className="group glass-strong rounded-2xl p-5 animate-fade-up hover:-translate-y-0.5 transition-transform"
@@ -113,7 +114,7 @@ export default function HistoryPage() {
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-1.5">
-                {h.analysis.sections.map((s) => (
+                {h.analysis?.sections?.map((s) => (
                   <div key={s.name} className="text-[11px]">
                     <div className="flex justify-between text-muted-foreground">
                       <span>{s.name}</span>

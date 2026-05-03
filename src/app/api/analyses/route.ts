@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     }
 
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    
+
     const { data, error } = await supabase
       .from("analyses")
       .insert({

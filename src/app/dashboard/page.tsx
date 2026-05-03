@@ -156,7 +156,7 @@ export default function DashboardHomePage() {
               />
               <div>
                 <div className="grid grid-cols-2 gap-2">
-                  {latest.analysis.sections.map((s) => (
+                  {(latest.analysis?.sections || []).map((s) => (
                     <div key={s.name} className="glass rounded-xl p-3">
                       <div className="text-[11px] text-muted-foreground">{s.name}</div>
                       <div className="mt-1 flex items-center gap-2">
@@ -172,7 +172,7 @@ export default function DashboardHomePage() {
                   ))}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {latest.analysis.missingKeywords.slice(0, 5).map((k) => (
+                  {(latest.analysis?.missingKeywords || []).slice(0, 5).map((k) => (
                     <span
                       key={k}
                       className="rounded-full px-2.5 py-1 text-[11px] border border-fuchsia-400/40 text-fuchsia-200 bg-fuchsia-500/10"
