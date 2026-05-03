@@ -5,19 +5,35 @@ import { buildAnalysis, type Analysis, type HistoryEntry } from "@/lib/resume-an
 type Row = {
   id: string;
   user_email: string;
-  file_name: string;
-  file_size: number;
-  analysis: Analysis;
+  file_name?: string;
+  file_size?: number;
+  analysis: any; // Can be string or object from DB
   created_at: string;
 };
 
 function toEntry(r: Row): HistoryEntry {
+  let parsedAnalysis: Analysis;
+  try {
+    parsedAnalysis = typeof r.analysis === "string" ? JSON.parse(r.analysis) : r.analysis;
+  } catch (e) {
+    console.error("API: Failed to parse analysis JSON:", e);
+    parsedAnalysis = {
+      resumeScore: 0,
+      atsScore: 0,
+      atsFriendly: false,
+      sections: [],
+      suggestions: [],
+      missingKeywords: [],
+      matchedKeywords: [],
+    };
+  }
+
   return {
     id: r.id,
-    fileName: r.file_name,
-    fileSize: r.file_size,
+    fileName: r.file_name || "Untitled Analysis",
+    fileSize: r.file_size || 0,
     createdAt: new Date(r.created_at).getTime(),
-    analysis: r.analysis,
+    analysis: parsedAnalysis,
   };
 }
 

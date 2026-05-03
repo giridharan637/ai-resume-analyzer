@@ -8,6 +8,41 @@ import { type Analysis, type HistoryEntry } from "@/lib/resume-analysis";
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((l) => l());
 
+interface AnalysisRow {
+  id: string;
+  file_name?: string;
+  file_size?: number;
+  created_at: string;
+  analysis: any; // Can be string or object from Supabase
+}
+
+function mapRowToEntry(r: AnalysisRow): HistoryEntry {
+  let parsedAnalysis: Analysis;
+  try {
+    parsedAnalysis = typeof r.analysis === "string" ? JSON.parse(r.analysis) : r.analysis;
+  } catch (e) {
+    console.error("Failed to parse analysis JSON:", e);
+    // Fallback to a minimal valid Analysis object
+    parsedAnalysis = {
+      resumeScore: 0,
+      atsScore: 0,
+      atsFriendly: false,
+      sections: [],
+      suggestions: [],
+      missingKeywords: [],
+      matchedKeywords: [],
+    };
+  }
+
+  return {
+    id: r.id,
+    fileName: r.file_name || "Untitled Analysis",
+    fileSize: r.file_size || 0,
+    createdAt: new Date(r.created_at).getTime(),
+    analysis: parsedAnalysis,
+  };
+}
+
 export function useAnalyses(userEmail: string | undefined | null) {
   const [data, setData] = useState<HistoryEntry[]>([]);
   const [error, setError] = useState<Error | null>(null);
@@ -46,14 +81,7 @@ export function useAnalyses(userEmail: string | undefined | null) {
           setError(new Error(fetchErr.message));
           setData([]);
         } else {
-          // Map snake_case to camelCase
-          const entries: HistoryEntry[] = (rows || []).map((r: any) => ({
-            id: r.id,
-            fileName: r.file_name,
-            fileSize: r.file_size,
-            createdAt: new Date(r.created_at).getTime(),
-            analysis: r.analysis,
-          }));
+          const entries: HistoryEntry[] = (rows as AnalysisRow[] || []).map(mapRowToEntry);
           setData(entries);
         }
       } catch (err: any) {
@@ -108,14 +136,7 @@ export async function saveAnalysis(
 
     notify();
     
-    // Map back to camelCase
-    return {
-      id: data.id,
-      fileName: data.file_name,
-      fileSize: data.file_size,
-      createdAt: new Date(data.created_at).getTime(),
-      analysis: data.analysis,
-    };
+    return mapRowToEntry(data as AnalysisRow);
   } catch (err: any) {
     console.error("saveAnalysis exception:", err);
     throw err;
