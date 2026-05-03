@@ -96,31 +96,35 @@ export default function SignupPage() {
 
       if (authError) {
         logDevError("Signup failed", authError.message);
-        
-        const msg = authError.message.toLowerCase();
-        if (msg.includes("user already registered")) {
-          setFormError("An account with this email already exists.");
-        } else if (msg.includes("rate limit")) {
-          setFormError("Too many attempts. Please try again later.");
-        } else {
-          setFormError("Could not create account. Please try again.");
-        }
+        setFormError(authError.message);
+        alert(authError.message);
         setSubmitting(false);
         return;
       }
 
       if (data.user) {
-        // Sync to custom table (optional)
-        try {
-          await supabase.from("users").insert([
+        // 3. Prevent duplicate insert by checking existing user by email
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", email.trim())
+          .single();
+
+        if (!existingUser) {
+          // 4. Insert user into "users" table
+          const { error: dbErr } = await supabase.from("users").insert([
             { 
               id: data.user.id, 
               email: email.trim(), 
+              name: name.trim(),
               created_at: new Date().toISOString()
             }
           ]);
-        } catch (dbErr) {
-          logDevError("DB Sync error", dbErr);
+
+          if (dbErr) {
+            logDevError("DB Sync error", dbErr.message);
+            alert("Database Error: " + dbErr.message);
+          }
         }
 
         if (data.session) {
@@ -132,9 +136,11 @@ export default function SignupPage() {
           router.push("/login");
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       logDevError("Unexpected signup exception", err);
-      setFormError("A connection error occurred. Please try again.");
+      const errMsg = err?.message || "A connection error occurred. Please try again.";
+      setFormError(errMsg);
+      alert(errMsg);
     } finally {
       setSubmitting(false);
     }

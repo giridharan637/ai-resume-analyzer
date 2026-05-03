@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiClient } from "@/client-lib/api-client";
+import { supabase } from "@/lib/supabase";
 import { type Analysis, type HistoryEntry } from "@/lib/resume-analysis";
 
 // Simple global refresh system to mimic SWR mutate
@@ -29,19 +29,43 @@ export function useAnalyses(userEmail: string | undefined | null) {
     }
 
     let isMounted = true;
-    setIsLoading(true);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const { data: rows, error: fetchErr } = await supabase
+          .from("analyses")
+          .select("*")
+          .eq("user_email", userEmail)
+          .order("created_at", { ascending: false });
 
-    apiClient
-      .get<HistoryEntry[]>(`/analyses?userEmail=${encodeURIComponent(userEmail)}`)
-      .then((res) => {
-        if (isMounted) setData(res.data);
-      })
-      .catch((err) => {
-        if (isMounted) setError(err);
-      })
-      .finally(() => {
+        if (!isMounted) return;
+
+        if (fetchErr) {
+          console.error("Supabase Fetch Error:", fetchErr.message);
+          alert("Failed to load history: " + fetchErr.message);
+          setError(new Error(fetchErr.message));
+        } else {
+          // Map snake_case to camelCase
+          const entries: HistoryEntry[] = (rows || []).map((r: any) => ({
+            id: r.id,
+            fileName: r.file_name,
+            fileSize: r.file_size,
+            createdAt: new Date(r.created_at).getTime(),
+            analysis: r.analysis,
+          }));
+          setData(entries);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error("Unexpected fetch error:", err);
+          setError(err);
+        }
+      } finally {
         if (isMounted) setIsLoading(false);
-      });
+      }
+    };
+
+    loadData();
 
     return () => {
       isMounted = false;
@@ -56,23 +80,82 @@ export async function saveAnalysis(
   fileName: string,
   fileSize: number,
   analysis: Analysis,
+  resumeText: string = "",
 ): Promise<HistoryEntry> {
-  const { data } = await apiClient.post<HistoryEntry>("/analyses", {
-    userEmail,
-    fileName,
-    fileSize,
-    analysis,
-  });
-  notify();
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from("analyses")
+      .insert([
+        {
+          user_email: userEmail,
+          file_name: fileName,
+          file_size: fileSize,
+          analysis: analysis,
+          score: analysis.resumeScore,
+          resume_text: resumeText,
+          created_at: new Date().toISOString(),
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase Insert Error:", error.message);
+      alert("Failed to save analysis: " + error.message);
+      throw new Error(error.message);
+    }
+
+    notify();
+    
+    // Map back to camelCase
+    return {
+      id: data.id,
+      fileName: data.file_name,
+      fileSize: data.file_size,
+      createdAt: new Date(data.created_at).getTime(),
+      analysis: data.analysis,
+    };
+  } catch (err: any) {
+    console.error("saveAnalysis exception:", err);
+    throw err;
+  }
 }
 
 export async function deleteAnalysis(userEmail: string, id: string) {
-  await apiClient.delete(`/analyses/${id}?userEmail=${encodeURIComponent(userEmail)}`);
-  notify();
+  try {
+    const { error } = await supabase
+      .from("analyses")
+      .delete()
+      .eq("id", id)
+      .eq("user_email", userEmail);
+
+    if (error) {
+      console.error("Supabase Delete Error:", error.message);
+      alert("Failed to delete: " + error.message);
+      throw new Error(error.message);
+    }
+    notify();
+  } catch (err: any) {
+    console.error("deleteAnalysis exception:", err);
+    throw err;
+  }
 }
 
 export async function clearAnalyses(userEmail: string) {
-  await apiClient.delete(`/analyses?userEmail=${encodeURIComponent(userEmail)}`);
-  notify();
+  try {
+    const { error } = await supabase
+      .from("analyses")
+      .delete()
+      .eq("user_email", userEmail);
+
+    if (error) {
+      console.error("Supabase Clear Error:", error.message);
+      alert("Failed to clear history: " + error.message);
+      throw new Error(error.message);
+    }
+    notify();
+  } catch (err: any) {
+    console.error("clearAnalyses exception:", err);
+    throw err;
+  }
 }

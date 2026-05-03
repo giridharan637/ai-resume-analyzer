@@ -118,11 +118,13 @@ export function ResumeAnalyzer({
       setAnalyzing(false);
       if (user?.email) {
         try {
-          await saveAnalysis(user.email, f.name, f.size, result);
+          // Pass placeholder for resume_text as requested by database schema
+          await saveAnalysis(user.email, f.name, f.size, result, "Resume text content extracted for analysis.");
           toast.success("Analysis complete · Saved to history");
-        } catch {
+        } catch (err: any) {
           toast.success("Analysis complete");
-          toast.error("Could not save to history");
+          console.error("Save error:", err.message);
+          alert("Could not save to history: " + err.message);
         }
       } else {
         toast.success("Analysis complete");

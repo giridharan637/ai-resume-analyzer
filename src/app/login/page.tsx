@@ -76,18 +76,9 @@ export default function LoginPage() {
 
       if (authError) {
         logDevError("Login failed", authError.message);
-        
-        // Map to user-friendly messages
-        const msg = authError.message.toLowerCase();
-        if (msg.includes("invalid login credentials")) {
-          setFormError("Incorrect email or password. Please try again.");
-        } else if (msg.includes("email not confirmed")) {
-          setFormError("Please verify your email before logging in.");
-        } else if (msg.includes("rate limit")) {
-          setFormError("Too many attempts. Please wait a moment.");
-        } else {
-          setFormError("Could not sign in. Please check your credentials.");
-        }
+        console.error("Login failed:", authError.message);
+        setFormError(authError.message);
+        alert(authError.message);
       } else if (data.user) {
         toast.success("Welcome back!");
         router.push("/dashboard");
